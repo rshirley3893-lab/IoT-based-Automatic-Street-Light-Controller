@@ -11,6 +11,15 @@ dashboard/
   app.js
 ```
 
+## Hardware Components used for firmware
+
+1. Arduino UNO R3
+2. 3x LEDs
+3. 3x IR sensors
+4. 1 LDR
+5. 220 ohm resistors
+6. Jumper wires
+
 ## 1. Upload the firmware
 
 1. Open `firmware/street_light_controller.ino` in the Arduino IDE.

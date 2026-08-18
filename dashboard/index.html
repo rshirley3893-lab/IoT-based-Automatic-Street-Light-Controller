@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Adaptive Street Light Controller</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div class="brand-text">
+      <h1>Smart Adaptive Street Light Controller</h1>
+      <p>Three-zone spatial sensing &amp; adaptive lighting</p>
+    </div>
+  </div>
+
+  <div class="connection">
+    <span id="connDot" class="conn-dot" aria-hidden="true"></span>
+    <span id="connLabel" class="conn-label">Not connected</span>
+    <button id="connectBtn" class="btn btn-primary">Connect Arduino</button>
+  </div>
+</header>
+
+<div class="statusbar" id="statusbar">
+  <div class="stat">
+    <span class="stat-label">Mode</span>
+    <span class="stat-value" id="statMode">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Day / Night</span>
+    <span class="stat-value" id="statDayNight">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Weather</span>
+    <span class="stat-value" id="statWeather">—</span>
+  </div>
+  <div class="stat stat-leds">
+    <span class="stat-label">LED brightness</span>
+    <div class="mini-leds">
+      <div class="mini-led"><span class="mini-led-fill" id="miniLed1"></span><label>1</label></div>
+      <div class="mini-led"><span class="mini-led-fill" id="miniLed2"></span><label>2</label></div>
+      <div class="mini-led"><span class="mini-led-fill" id="miniLed3"></span><label>3</label></div>
+    </div>
+  </div>
+  <button id="quickEmergencyBtn" class="btn btn-emergency-quick">Emergency</button>
+</div>
+
+<nav class="tabs" role="tablist" aria-label="Feature pages">
+  <button class="tab active" data-page="predictive" role="tab" aria-selected="true">Predictive lighting</button>
+  <button class="tab" data-page="traffic" role="tab" aria-selected="false">Traffic intensity</button>
+  <button class="tab" data-page="emergency" role="tab" aria-selected="false">Emergency mode</button>
+  <button class="tab" data-page="weather" role="tab" aria-selected="false">Weather adaptive</button>
+</nav>
+
+<main>
+
+  <!-- ============ PAGE 1 — PREDICTIVE LIGHTING ============ -->
+  <section class="page active" id="page-predictive">
+    <div class="page-head">
+      <h2>Predictive vehicle-aware lighting</h2>
+      <p>Detection at one zone pre-illuminates the zone ahead, inferred from the direction of travel across the three sensors.</p>
+    </div>
+
+    <div class="road-panel">
+      <svg class="road-svg" viewBox="0 0 720 220" role="img" aria-label="Road zone visualization">
+        <rect x="0" y="90" width="720" height="60" fill="var(--asphalt)"/>
+        <line x1="0" y1="120" x2="720" y2="120" stroke="var(--lane-line)" stroke-width="3" stroke-dasharray="18 14" id="laneLine"/>
+        <g id="postGroup1">
+          <rect x="115" y="40" width="6" height="50" fill="var(--post)"/>
+          <circle id="glow1" cx="118" cy="34" r="34" fill="var(--amber-glow)" opacity="0.08"/>
+          <circle id="lamp1" cx="118" cy="34" r="11" fill="var(--post)"/>
+        </g>
+        <g id="postGroup2">
+          <rect x="357" y="40" width="6" height="50" fill="var(--post)"/>
+          <circle id="glow2" cx="360" cy="34" r="34" fill="var(--amber-glow)" opacity="0.08"/>
+          <circle id="lamp2" cx="360" cy="34" r="11" fill="var(--post)"/>
+        </g>
+        <g id="postGroup3">
+          <rect x="599" y="40" width="6" height="50" fill="var(--post)"/>
+          <circle id="glow3" cx="602" cy="34" r="34" fill="var(--amber-glow)" opacity="0.08"/>
+          <circle id="lamp3" cx="602" cy="34" r="11" fill="var(--post)"/>
+        </g>
+        <text x="118" y="185" text-anchor="middle" class="road-label">Zone 1</text>
+        <text x="360" y="185" text-anchor="middle" class="road-label">Zone 2</text>
+        <text x="602" y="185" text-anchor="middle" class="road-label">Zone 3</text>
+      </svg>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <span class="card-label">Detected vehicle zone</span>
+        <span class="card-value" id="predDetectedZone">None</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Inferred direction</span>
+        <span class="card-value" id="predDirection">None</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Predicted next zone</span>
+        <span class="card-value" id="predNextZone">None</span>
+      </div>
+    </div>
+
+    <div class="zone-table">
+      <div class="zone-row zone-row-head">
+        <span>Zone</span><span>IR sensor</span><span>Brightness</span>
+      </div>
+      <div class="zone-row">
+        <span>Zone 1</span><span id="predIr1" class="pill pill-clear">Clear</span><span id="predBright1">0%</span>
+      </div>
+      <div class="zone-row">
+        <span>Zone 2</span><span id="predIr2" class="pill pill-clear">Clear</span><span id="predBright2">0%</span>
+      </div>
+      <div class="zone-row">
+        <span>Zone 3</span><span id="predIr3" class="pill pill-clear">Clear</span><span id="predBright3">0%</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE 2 — TRAFFIC INTENSITY ============ -->
+  <section class="page" id="page-traffic">
+    <div class="page-head">
+      <h2>Traffic-intensity adaptive dimming</h2>
+      <p>Prototype traffic estimate from how many zones are active at once — not a calibrated vehicle-counting system.</p>
+    </div>
+
+    <div class="traffic-level-panel">
+      <div class="traffic-level-badge" id="trafficLevelBadge">LOW</div>
+      <div class="traffic-meta">
+        <div><span class="stat-label">Active zones</span><span class="stat-value" id="trafficActiveCount">0 / 3</span></div>
+        <div><span class="stat-label">Detections this session</span><span class="stat-value" id="trafficDetections">0</span></div>
+        <div><span class="stat-label">Baseline brightness</span><span class="stat-value" id="trafficBaseline">20%</span></div>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <span class="card-label">LED 1</span>
+        <span class="card-value" id="trafficLed1">0%</span>
+      </div>
+      <div class="card">
+        <span class="card-label">LED 2</span>
+        <span class="card-value" id="trafficLed2">0%</span>
+      </div>
+      <div class="card">
+        <span class="card-label">LED 3</span>
+        <span class="card-value" id="trafficLed3">0%</span>
+      </div>
+    </div>
+
+    <div class="history-panel">
+      <span class="card-label">Recent traffic activity</span>
+      <div class="history-strip" id="historyStrip" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- ============ PAGE 3 — EMERGENCY MODE ============ -->
+  <section class="page" id="page-emergency">
+    <div class="page-head">
+      <h2>Emergency vehicle priority mode</h2>
+      <p>Overrides day/night and traffic logic entirely. All three lights are forced to full brightness for a clear, unobstructed path.</p>
+    </div>
+
+    <div class="emergency-panel">
+      <div class="emergency-status" id="emergencyStatusBanner">AUTOMATIC MODE</div>
+      <div class="emergency-controls">
+        <button id="emergencyOnBtn" class="btn btn-emergency-large">Activate emergency mode</button>
+        <button id="emergencyOffBtn" class="btn btn-secondary-large">Return to automatic</button>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <span class="card-label">LED 1</span>
+        <span class="card-value" id="emLed1">0%</span>
+      </div>
+      <div class="card">
+        <span class="card-label">LED 2</span>
+        <span class="card-value" id="emLed2">0%</span>
+      </div>
+      <div class="card">
+        <span class="card-label">LED 3</span>
+        <span class="card-value" id="emLed3">0%</span>
+      </div>
+    </div>
+
+    <p class="disclaimer">Conceptual demonstration only — not integrated with real emergency-vehicle signalling systems.</p>
+  </section>
+
+  <!-- ============ PAGE 4 — WEATHER ADAPTIVE ============ -->
+  <section class="page" id="page-weather">
+    <div class="page-head">
+      <h2>Weather-adaptive lighting</h2>
+      <p>Sets the night-time baseline brightness according to the selected weather condition.</p>
+    </div>
+
+    <div class="weather-grid">
+      <button class="weather-option" data-weather="CLEAR">
+        <span class="weather-icon" aria-hidden="true">☀</span>
+        <span class="weather-name">Clear</span>
+        <span class="weather-target">20%</span>
+      </button>
+      <button class="weather-option" data-weather="RAIN">
+        <span class="weather-icon" aria-hidden="true">🌦</span>
+        <span class="weather-name">Normal rain</span>
+        <span class="weather-target">50%</span>
+      </button>
+      <button class="weather-option" data-weather="HEAVY">
+        <span class="weather-icon" aria-hidden="true">🌧</span>
+        <span class="weather-name">Heavy rain</span>
+        <span class="weather-target">100%</span>
+      </button>
+      <button class="weather-option" data-weather="FOG">
+        <span class="weather-icon" aria-hidden="true">🌫</span>
+        <span class="weather-name">Fog</span>
+        <span class="weather-target">100%</span>
+      </button>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <span class="card-label">Current weather</span>
+        <span class="card-value" id="weatherCurrent">Clear</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Target baseline</span>
+        <span class="card-value" id="weatherTarget">20%</span>
+      </div>
+      <div class="card">
+        <span class="card-label">Weather mode status</span>
+        <span class="card-value" id="weatherModeStatus">Active</span>
+      </div>
+    </div>
+
+    <p class="disclaimer">Manual selection for this prototype — no physical rain/fog sensors are used. A weather API can be wired in later without changing the serial protocol.</p>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>Communicates with Arduino UNO over USB serial (9600 baud) using the Web Serial API. Requires a Chromium-based browser.</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
